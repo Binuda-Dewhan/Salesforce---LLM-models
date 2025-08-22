@@ -1,0 +1,2 @@
+pip install fastapi uvicorn pydantic requests python-dotenv
+pip install mistralai
