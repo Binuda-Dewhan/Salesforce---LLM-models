@@ -1,2 +1,9 @@
-pip install fastapi uvicorn pydantic requests python-dotenv
-pip install mistralai
+transformers
+peft
+trl
+datasets
+bitsandbytes
+accelerate
+notebook
+ipykernel
+torch

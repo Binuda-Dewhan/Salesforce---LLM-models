@@ -3,6 +3,7 @@ node_modules/
 
 # Ignore log files
 *.log
+logs/
 
 # Ignore OS generated files
 .DS_Store
@@ -12,7 +13,7 @@ Thumbs.db
 .env
 
 # Ignore package-lock.json for Node.js projects (optional, if you don’t want it tracked)
-package-lock.json
+# package-lock.json
 
 # Ignore build directory
 /dist/
@@ -20,6 +21,7 @@ package-lock.json
 
 # Ignore dependency directories
 /.venv/
+/venv/
 /.idea/
 
 # Ignore temporary files
@@ -33,13 +35,25 @@ coverage/
 # Ignore IDE or editor specific folders
 .vscode/
 /.idea/
-/*.iml
+*.iml
 
 # Ignore Python bytecode files
 __pycache__/
 *.pyc
+*.pyo
 
 # Ignore sensitive files (optional)
 *.pem
 *.key
 *.crt
+
+# Machine Learning / Jupyter Notebook Specifics
+.ipynb_checkpoints/
+salesforce-mistral-lora/
+salesforce-gemma-lora/
+results/
+lora_salesforce_notes/
+*.zip
+
+# Ignore sqlite DBs if any
+*.sqlite3
