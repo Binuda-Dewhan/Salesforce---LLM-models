@@ -1,9 +1,26 @@
-transformers
-peft
-trl
-datasets
-bitsandbytes
-accelerate
-notebook
-ipykernel
-torch
+# ==============================================================================
+# Salesforce AI & LLM Integration Dependencies
+# ==============================================================================
+
+# Core Web Framework & API Server
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# LLM Agent Providers & Tool Calling
+mistralai>=1.0.0
+
+# Deep Learning & LoRA Model Engine
+torch>=2.2.0
+transformers>=4.40.0
+peft>=0.10.0
+trl>=0.8.6
+datasets>=2.19.0
+bitsandbytes>=0.43.0
+accelerate>=0.29.0
+
+# Interactive Development & Notebooks
+notebook>=7.0.0
+ipykernel>=6.29.0

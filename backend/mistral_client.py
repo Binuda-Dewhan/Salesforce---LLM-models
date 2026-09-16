@@ -1,20 +1,24 @@
-import os
-from dotenv import load_dotenv
-from mistralai import Mistral
+"""
+Legacy module alias for backward-compatibility.
+Redirects directly to backend.llm_client.
+"""
 
-load_dotenv()
-MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
-MODEL = "mistral-small-latest"  # or open-mistral-7b
+from .llm_client import (
+    chat_with_tools,
+    call_gemini_api,
+    call_mistral_api,
+    fallback_intent_matcher,
+    MockMessage,
+    MockFunction,
+    MockToolCall,
+)
 
-client = Mistral(api_key=MISTRAL_API_KEY)
-
-def chat_with_tools(messages, tools):
-    resp = client.chat.complete(
-        model=MODEL,
-        messages=messages,
-        tools=tools,
-        tool_choice="auto"
-    )
-    choice = resp.choices[0].message
-    tool_calls = getattr(choice, "tool_calls", None)
-    return choice, tool_calls
+__all__ = [
+    "chat_with_tools",
+    "call_gemini_api",
+    "call_mistral_api",
+    "fallback_intent_matcher",
+    "MockMessage",
+    "MockFunction",
+    "MockToolCall",
+]

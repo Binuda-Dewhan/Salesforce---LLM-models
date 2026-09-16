@@ -69,13 +69,17 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "formatNotes",
-            "description": "Format raw meeting transcript into structured Salesforce notes",
+            "description": "Format raw messy meeting transcripts, call notes, or unstructured text into standard structured 5-section Salesforce CRM notes. ALWAYS call this tool when the user provides meeting notes, transcripts, or asks to prepare or format notes.",
             "parameters": {
-            "type": "object",
-            "properties": {
-                "rawText": {"type": "string"}
-            },
-            "required": ["rawText"]
+                "type": "object",
+                "properties": {
+                    "rawText": {
+                        "type": "string",
+                        "description": "The raw unstructured notes or meeting transcript to format."
+                    }
+                },
+                "required": ["rawText"],
+                "additionalProperties": False
             }
         }
     },
@@ -92,6 +96,24 @@ TOOLS = [
                     "title": {"type": "string", "default": "Meeting Notes"}
                 },
                 "required": ["opportunityId", "newNoteToAdd"],
+                "additionalProperties": False
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "executeSOQL",
+            "description": "Execute any read-only Salesforce Object Query Language (SOQL) query to fetch, count, aggregate, filter, or inspect records (Opportunities, Accounts, Contacts, Notes). Use this when user asks for counts, aggregates, rankings, lists, or custom filters (e.g., 'SELECT COUNT() FROM Opportunity', 'SELECT SUM(Amount) FROM Opportunity', 'SELECT Name, StageName, Amount FROM Opportunity ORDER BY Amount DESC LIMIT 5').",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The exact valid SOQL query starting with SELECT."
+                    }
+                },
+                "required": ["query"],
                 "additionalProperties": False
             }
         }

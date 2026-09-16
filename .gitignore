@@ -1,59 +1,61 @@
-# Ignore node_modules
-node_modules/
+# ==============================================================================
+# Git Ignore Configuration for Salesforce AI & LLM Integration
+# ==============================================================================
 
-# Ignore log files
-*.log
-logs/
-
-# Ignore OS generated files
-.DS_Store
-Thumbs.db
-
-# Ignore environment variables file
+# 1. Environment & Secret Credentials (Never track live credentials)
 .env
-
-# Ignore package-lock.json for Node.js projects (optional, if you don’t want it tracked)
-# package-lock.json
-
-# Ignore build directory
-/dist/
-/build/
-
-# Ignore dependency directories
-/.venv/
-/venv/
-/.idea/
-
-# Ignore temporary files
-*.swp
-*.swo
-*.bak
-
-# Ignore coverage folder
-coverage/
-
-# Ignore IDE or editor specific folders
-.vscode/
-/.idea/
-*.iml
-
-# Ignore Python bytecode files
-__pycache__/
-*.pyc
-*.pyo
-
-# Ignore sensitive files (optional)
+.env.*
+!.env.example
+!.env.sample
 *.pem
 *.key
 *.crt
 
-# Machine Learning / Jupyter Notebook Specifics
-.ipynb_checkpoints/
-salesforce-mistral-lora/
-salesforce-gemma-lora/
-results/
-lora_salesforce_notes/
-*.zip
+# 2. Virtual Environments & Dependencies
+venv/
+.venv/
+env/
+.env/
+node_modules/
 
-# Ignore sqlite DBs if any
+# 3. Python Bytecode & Package Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+
+# 4. Machine Learning Checkpoints & Training Runs
+checkpoint-*/
+*/checkpoint-*/
+salesforce-*-lora*/
+lora_salesforce_notes/
+results/
+runs/
+wandb/
+.ipynb_checkpoints/
+*.zip
+*.tar.gz
+
+# 5. IDEs & Operating System Files
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+
+# 6. Testing, Coverage & Logs
+.coverage
+coverage/
+.pytest_cache/
+.mypy_cache/
+*.log
+logs/
 *.sqlite3

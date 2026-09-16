@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salesforce AI Agent & LoRA CRM Intelligence Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="navbar">
+    <div class="brand-container">
+      <div class="brand-logo">SF</div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <h1 class="brand-title">Salesforce Agentforce Studio</h1>
+          <span class="brand-badge">Autonomous AI</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Health Indicators -->
+    <div class="status-pills">
+      <div class="pill" id="pill-gemini">
+        <span class="pill-dot online"></span>
+        <span>Gemini 3.6 / Flash-Lite</span>
+      </div>
+      <div class="pill" id="pill-lora">
+        <span class="pill-dot online"></span>
+        <span>Gemma-2B LoRA</span>
+      </div>
+      <div class="pill" id="pill-mcp">
+        <span class="pill-dot online"></span>
+        <span>MCP :5000</span>
+      </div>
+      <div class="pill" id="pill-sf">
+        <span class="pill-dot online"></span>
+        <span>Salesforce Live</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Workspace Tabs -->
+  <nav class="tabs-header">
+    <button class="tab-btn active" id="tab-btn-chat" onclick="switchTab('chat')">
+      💬 Conversational CRM Agent & SOQL
+    </button>
+    <button class="tab-btn" id="tab-btn-lora" onclick="switchTab('lora')">
+      ✨ Gemma-2B LoRA Meeting Notes Studio
+    </button>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- TAB 1: Conversational AI Agent -->
+    <section class="tab-content active" id="tab-chat">
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🤖 Autonomous CRM Agent Control Plane</div>
+            <div class="card-desc">Ask natural language questions, search records, generate live SOQL queries, and trigger Salesforce tools.</div>
+          </div>
+          <button class="btn-secondary" onclick="clearChat()">Clear Chat</button>
+        </div>
+
+        <!-- Chat Conversation Stream -->
+        <div class="chat-window" id="chat-stream">
+          <!-- Initial Welcome Message -->
+          <div class="message agent">
+            <div class="message-bubble">
+              👋 <strong>Welcome to Salesforce AI Agentforce!</strong><br>
+              I am powered by <strong>Google Gemini Flash</strong>, <strong>MCP JSON-RPC tools</strong>, and your local <strong>Gemma-2B LoRA adapter</strong>.<br><br>
+              You can ask me to search opportunities, run dynamic SOQL counts/analytics, fetch deal stages, or format meeting notes!
+            </div>
+            <div class="message-meta">Agent Brain • Ready</div>
+          </div>
+        </div>
+
+        <!-- Quick Query Suggestion Chips -->
+        <div class="quick-chips">
+          <button class="chip" onclick="useQuery('How many opportunities are in Salesforce?')">📊 Count Total Opportunities</button>
+          <button class="chip" onclick="useQuery('Show me the top 3 highest value deals by amount')">💰 Top 3 Opportunities by Value</button>
+          <button class="chip" onclick="useQuery('Find the opportunity called Dickenson Mobile Generators')">🔍 Find Dickenson Generators</button>
+          <button class="chip" onclick="useQuery('What is the stage of opportunity 006gL00000A4GZtQAN?')">📈 Check Opportunity Stage</button>
+          <button class="chip" onclick="useQuery('prepare a note for me RetailAxis - Sarah Gold: Struggling with inventory sync. Wants cloud migration plan by Q1.')">📝 Format Notes via LoRA</button>
+        </div>
+
+        <!-- Input Box -->
+        <form class="input-row" id="chat-form" onsubmit="handleChatSubmit(event)">
+          <input 
+            type="text" 
+            id="chat-input" 
+            class="text-input" 
+            placeholder="Type your Salesforce query or command (e.g. 'Show me deals in Closed Won stage')..." 
+            autocomplete="off"
+            required
+          />
+          <button type="submit" class="btn-primary" id="chat-send-btn">
+            <span>Send</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 2: LoRA Notes Formatter Studio -->
+    <section class="tab-content" id="tab-lora">
+      <div class="studio-grid">
+        
+        <!-- Left: Raw Meeting Notes Input -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">📝 Unstructured Meeting Transcript</div>
+              <div class="card-desc">Paste messy notes, call transcripts, or voice memos from sales calls.</div>
+            </div>
+            <button class="btn-secondary" onclick="loadSampleNotes()">Load Sample</button>
+          </div>
+
+          <textarea 
+            id="raw-notes-input" 
+            class="textarea-input" 
+            placeholder="Paste messy meeting notes here...&#10;Example: Met with CTO John at Acme Corp on Oct 12. Current legacy CRM is too slow and takes 5 mins per update. Wants to reduce manual entry by 40%. Budget approved for Q4. Action: Send migration roadmap by Friday."
+          ></textarea>
+
+          <div style="margin-top: 1rem; display: flex; gap: 0.75rem;">
+            <button class="btn-primary" id="format-lora-btn" onclick="formatNotesDirect()" style="flex: 1;">
+              <span>✨ Format with Gemma-2B LoRA</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: 5-Section Formatted Enterprise CRM Schema -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">📋 Standard Enterprise CRM Schema</div>
+              <div class="card-desc">Generated by 4-bit QLoRA adapter in local GPU VRAM.</div>
+            </div>
+            <button class="btn-secondary" onclick="copyFormatted()">Copy Text</button>
+          </div>
+
+          <div class="formatted-box" id="formatted-notes-output">
+<span style="color: var(--text-muted); font-style: italic;">Click "Format with Gemma-2B LoRA" to transform messy transcripts into the standard 5-section enterprise schema:&#10;&#10;• Summary&#10;• Key Pain Points&#10;• Action Items&#10;• Next Steps&#10;• Date/Time of Interaction</span>
+          </div>
+
+          <!-- Direct Sync to Salesforce Box -->
+          <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color); display: flex; gap: 0.5rem; align-items: center;">
+            <input 
+              type="text" 
+              id="sync-opp-id" 
+              class="text-input" 
+              placeholder="Target Opportunity ID (e.g. 006gL00000A4GZtQAN)" 
+              value="006gL00000A4GZtQAN"
+              style="max-width: 280px;"
+            />
+            <button class="btn-success" id="sync-sf-btn" onclick="syncNoteToSalesforce()" style="flex: 1;">
+              <span>☁️ Sync Note to Salesforce</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span>Salesforce AI Integration Platform • Powered by Google Gemini 3.6 / 3.5 Flash-Lite & Fine-Tuned Gemma-2B LoRA</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
