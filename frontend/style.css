@@ -589,6 +589,28 @@ body {
   background: var(--bg-glass);
 }
 
+/* Guardrail Refusal Box */
+.guardrail-refusal {
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+}
+
+/* Collapsible Grounded Tool Execution Drawer */
+.tool-trace-drawer summary {
+  transition: color 0.2s ease;
+}
+
+.tool-trace-drawer summary:hover {
+  color: #c7d2fe;
+}
+
+.tool-trace-drawer[open] summary {
+  color: #a5b4fc;
+  margin-bottom: 0.5rem;
+}
+
 @media (max-width: 900px) {
   .studio-grid {
     grid-template-columns: 1fr;
@@ -600,3 +622,4 @@ body {
     padding: 1rem;
   }
 }
+

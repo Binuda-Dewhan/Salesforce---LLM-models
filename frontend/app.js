@@ -119,6 +119,22 @@ function renderRecordsTable(records) {
   return html;
 }
 
+// Lightweight Markdown to HTML Formatter for Grounded Responses
+function formatMarkdown(text) {
+  if (!text) return "";
+  let html = text
+    .replace(/^### (.*$)/gim, '<h4 style="margin: 0.8rem 0 0.35rem 0; color: #a5b4fc; font-size: 0.95rem;">$1</h4>')
+    .replace(/^## (.*$)/gim, '<h3 style="margin: 0.9rem 0 0.45rem 0; color: #c7d2fe; font-size: 1.05rem;">$1</h3>')
+    .replace(/^# (.*$)/gim, '<h2 style="margin: 1rem 0 0.55rem 0; color: #e0e7ff; font-size: 1.15rem;">$1</h2>')
+    .replace(/\*\*(.*?)\*\*/gim, '<strong style="color: #f8fafc;">$1</strong>')
+    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+    .replace(/`([^`]+)`/gim, '<code style="background: rgba(0,0,0,0.3); padding: 0.15rem 0.35rem; border-radius: 4px; font-family: var(--font-mono); font-size: 0.82rem; color: #6ee7b7;">$1</code>')
+    .replace(/^\s*[\-\*]\s+(.*$)/gim, '<li style="margin-left: 1.2rem; margin-bottom: 0.3rem;">$1</li>')
+    .replace(/\n\n/gim, '<div style="margin-bottom: 0.6rem;"></div>')
+    .replace(/\n/gim, '<br>');
+  return html;
+}
+
 // Handle Conversational Chat Submission
 async function handleChatSubmit(event) {
   event.preventDefault();
@@ -132,7 +148,7 @@ async function handleChatSubmit(event) {
   chatSendBtn.innerHTML = `<span class="spinner"></span>`;
 
   // Temporary loading bubble
-  const loadingMsg = appendMessage("agent", `<em>Thinking & querying tools...</em> <span class="spinner"></span>`, "Google Gemini 3.6 Flash");
+  const loadingMsg = appendMessage("agent", `<em>Thinking, querying Salesforce & synthesizing...</em> <span class="spinner"></span>`, "CRM Executive Assistant");
 
   const startTime = performance.now();
 
@@ -153,7 +169,72 @@ async function handleChatSubmit(event) {
     const data = await response.json();
     let replyHtml = "";
 
-    if (data.type === "tool_result") {
+    // 1. New Grounded Agent Response Format
+    if (data.type === "agent_response") {
+      const isRefusal = data.is_refusal;
+      const toolExecs = data.tool_executions || [];
+
+      if (isRefusal) {
+        replyHtml += `
+          <div class="guardrail-refusal">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; color: #fb7185; font-weight: 600; font-size: 0.85rem;">
+              <span>🛡️ CRM Scope Guardrail</span>
+            </div>
+            <div style="font-size: 0.9rem; line-height: 1.5; color: #cbd5e1;">${formatMarkdown(data.answer)}</div>
+          </div>
+        `;
+      } else {
+        // Primary Grounded Executive Answer
+        replyHtml += `<div class="agent-grounded-answer" style="font-size: 0.92rem; line-height: 1.6; color: #f1f5f9;">${formatMarkdown(data.answer)}</div>`;
+
+        // Collapsible Grounded Audit Trail (if tools were executed)
+        if (toolExecs.length > 0) {
+          replyHtml += `
+            <details class="tool-trace-drawer" style="margin-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.5rem;">
+              <summary style="cursor: pointer; font-size: 0.78rem; color: var(--text-muted); user-select: none; display: flex; align-items: center; gap: 0.4rem;">
+                <span>⚡ Grounded in ${toolExecs.length} Salesforce Tool Execution(s)</span>
+              </summary>
+              <div style="margin-top: 0.6rem; display: flex; flex-direction: column; gap: 0.75rem;">
+          `;
+
+          toolExecs.forEach((te) => {
+            const tool = te.tool;
+            const args = te.args || {};
+            const res = te.result || {};
+
+            let badgeClass = "tool-badge";
+            if (tool === "executeSOQL") badgeClass += " soql";
+            if (tool === "formatNotes") badgeClass += " lora";
+
+            replyHtml += `
+              <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 0.6rem;">
+                <div style="margin-bottom: 0.4rem;"><span class="${badgeClass}">Tool: ${tool}</span></div>
+            `;
+
+            if (tool === "executeSOQL") {
+              replyHtml += `<div style="font-family: var(--font-mono); font-size: 0.75rem; color: #a5b4fc; background: rgba(0,0,0,0.3); padding: 0.35rem 0.5rem; border-radius: 4px; margin-bottom: 0.5rem;">${args.query || ''}</div>`;
+              if (res.totalSize !== undefined && (!res.records || res.records.length === 0)) {
+                replyHtml += `<p style="font-size: 0.82rem;"><strong>Total Records:</strong> <span style="color: #6ee7b7; font-weight: 700;">${res.totalSize}</span></p>`;
+              } else if (res.records) {
+                replyHtml += renderRecordsTable(res.records);
+              }
+            } else if (res.records) {
+              replyHtml += renderRecordsTable(res.records);
+            } else if (typeof res === "string") {
+              replyHtml += `<div style="white-space: pre-wrap; font-size: 0.82rem;">${res}</div>`;
+            } else {
+              replyHtml += `<pre style="font-size: 0.75rem; color: var(--text-muted);">${JSON.stringify(res, null, 2)}</pre>`;
+            }
+
+            replyHtml += `</div>`;
+          });
+
+          replyHtml += `</div></details>`;
+        }
+      }
+
+    // 2. Legacy / Direct Tool Result Handling (Backwards Compatible)
+    } else if (data.type === "tool_result") {
       const tool = data.tool;
       const args = data.args;
       const res = data.result;
@@ -188,7 +269,7 @@ async function handleChatSubmit(event) {
       }
 
     } else if (data.type === "answer") {
-      replyHtml = `<div style="white-space: pre-wrap;">${data.message}</div>`;
+      replyHtml = `<div style="white-space: pre-wrap;">${formatMarkdown(data.message)}</div>`;
     } else if (data.type === "error") {
       replyHtml = `<div style="color: var(--accent-rose);">❌ <strong>Error:</strong> ${data.error}</div>`;
     } else {

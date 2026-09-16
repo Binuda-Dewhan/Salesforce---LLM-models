@@ -142,14 +142,51 @@ def fallback_intent_matcher(user_text: str) -> Optional[List[MockToolCall]]:
     return None
 
 
+CRM_AGENT_SYSTEM_PROMPT = (
+    "You are an enterprise Salesforce CRM Executive Assistant.\n"
+    "Your role is exclusively to help users query, analyze, inspect, and update their Salesforce CRM data "
+    "(Opportunities, Accounts, Contacts, Notes), and to format meeting notes using the fine-tuned LoRA model.\n\n"
+    "STRICT DOMAIN BOUNDARIES & SCOPE GUARDRAILS:\n"
+    "1. You operate EXCLUSIVELY within the domain of Salesforce CRM, sales pipelines, accounts, opportunities, CRM notes, and sales operations.\n"
+    "2. If the user asks ANY general knowledge, trivia, coding riddles, recipes, history, geography, creative writing, or non-CRM questions "
+    "(e.g., 'What is the capital of France?', 'How do I bake bread?', 'Tell me a joke', 'Who won the World Cup?', 'Write a Python script'):\n"
+    "   - You MUST POLITELY DECLINE the request.\n"
+    "   - Formulate your response as: 'I am specialized exclusively as your Salesforce CRM Executive Assistant. I cannot assist with general knowledge or off-topic inquiries, but I am ready to help you analyze your Salesforce pipeline, query opportunities, inspect accounts, or format meeting notes.'\n"
+    "   - Do NOT answer the off-topic question. Do NOT invoke any tools.\n\n"
+    "TOOL CALLING INSTRUCTIONS:\n"
+    "1. For questions requiring Salesforce data (counts, sums, lists, stages, rankings, custom filtering), call `executeSOQL`.\n"
+    "2. When the user asks a compound question with multiple data requirements (e.g., 'How many opportunities are in Salesforce? and what are the valuable ones?'), "
+    "   you MUST generate ALL necessary tool calls (e.g. one executeSOQL for COUNT() and one executeSOQL for the top opportunities by Amount).\n"
+    "3. For formatting unstructured meeting notes or call transcripts, call `formatNotes`.\n"
+    "4. For creating/attaching notes to opportunities, call `createNotes`.\n"
+    "5. For fetching latest notes, call `getLatestNotes`.\n"
+    "6. For finding specific accounts or opportunities by name, call `searchAccounts` or `searchOpportunities`."
+)
+
+SYNTHESIZER_SYSTEM_PROMPT = (
+    "You are an enterprise Salesforce CRM Executive Assistant.\n"
+    "Your task is to synthesize a professional, executive-ready, natural language response to the user's inquiry based strictly on the real observations returned by Salesforce tools.\n\n"
+    "GROUNDING & SYNTHESIS RULES:\n"
+    "1. STRICT TRUTHFULNESS: Only state facts, numbers, names, and metrics that appear in the Tool Execution Observations. Never hallucinate or invent records.\n"
+    "2. EXECUTIVE TONE & BUSINESS INSIGHTS: Provide clear business context, highlight key figures (e.g., total counts, highest value deals, deal stages, account names), and explain what the numbers mean.\n"
+    "3. CONTEXT-ADAPTIVE FORMATTING:\n"
+    "   - Address ALL parts of the user's question (e.g. if they asked both for total count AND top valuable deals, answer both clearly).\n"
+    "   - Use bold text for key figures, metrics, and opportunity names.\n"
+    "   - Use clean bullet points for readability when listing multiple items.\n"
+    "   - Do NOT force ASCII or raw markdown tables unless the user explicitly requested a table.\n"
+    "   - Keep it concise, executive, and actionable.\n"
+    "4. If a tool returned no records or an error, explain politely and suggest what query or search might work."
+)
+
+
 def call_gemini_api(
     messages: List[Dict[str, str]],
     tools: List[Dict[str, Any]],
     api_key: str,
 ) -> Optional[Tuple[Any, Optional[List[Any]]]]:
     """
-    Calls Google Gemini API using the OpenAI-compatible REST endpoint with function calling.
-    Cascades from gemini-2.0-flash to gemini-1.5-flash on the Google AI Studio Free Tier.
+    Calls Google Gemini API using OpenAI-compatible REST endpoint with function calling.
+    Cascades across Google AI Studio models with separate quota buckets.
     """
     url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
     headers = {
@@ -157,8 +194,6 @@ def call_gemini_api(
         "Content-Type": "application/json",
     }
 
-    # Verified Google AI Studio Models in Fallback Priority Order
-    # Each model has its own separate quota bucket on the free tier.
     models_to_try = [
         "gemini-3.6-flash",
         "gemini-3.5-flash-lite",
@@ -167,18 +202,9 @@ def call_gemini_api(
         "gemini-2.5-flash",
     ]
 
-    # Prepare system prompt to ensure consistent CRM tool selection
-    system_prompt = (
-        "You are an expert AI Salesforce CRM Assistant. You have access to tools for Salesforce CRM, SOQL queries, and note formatting. "
-        "When the user asks for counts, aggregates, lists, rankings, custom filtering, or any general Salesforce data query, call executeSOQL. "
-        "When the user asks to search opportunities or accounts, get opportunity details or stage, create notes, "
-        "fetch latest notes, or prepare/format meeting notes and transcripts, call the corresponding function tool "
-        "(executeSOQL, searchOpportunities, getOpportunity, createNotes, getLatestNotes, searchAccounts, formatNotes)."
-    )
-
     formatted_messages = []
     if not any(m.get("role") == "system" for m in messages):
-        formatted_messages.append({"role": "system", "content": system_prompt})
+        formatted_messages.append({"role": "system", "content": CRM_AGENT_SYSTEM_PROMPT})
     formatted_messages.extend(messages)
 
     for model_name in models_to_try:
@@ -218,10 +244,15 @@ def call_mistral_api(
     try:
         from mistralai.client import Mistral
 
+        formatted_messages = []
+        if not any(m.get("role") == "system" for m in messages):
+            formatted_messages.append({"role": "system", "content": CRM_AGENT_SYSTEM_PROMPT})
+        formatted_messages.extend(messages)
+
         client = Mistral(api_key=api_key)
         resp = client.chat.complete(
             model="mistral-small-latest",
-            messages=messages,
+            messages=formatted_messages,
             tools=tools,
             tool_choice="auto",
         )
@@ -230,6 +261,154 @@ def call_mistral_api(
         return choice, tool_calls
     except Exception:
         return None
+
+
+def generate_llm_text(messages: List[Dict[str, str]]) -> Optional[str]:
+    """
+    Direct LLM text completion (without function calling) for answer synthesis.
+    Cascades through Gemini models, then Mistral API.
+    """
+    load_env_file()
+    gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if gemini_key:
+        url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {gemini_key}",
+            "Content-Type": "application/json",
+        }
+        models_to_try = [
+            "gemini-3.6-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
+            "gemini-flash-lite-latest",
+            "gemini-2.5-flash",
+        ]
+        for model_name in models_to_try:
+            try:
+                r = requests.post(
+                    url,
+                    headers=headers,
+                    json={"model": model_name, "messages": messages},
+                    timeout=25,
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    content = data["choices"][0]["message"].get("content", "").strip()
+                    if content:
+                        return content
+            except Exception:
+                continue
+
+    mistral_key = os.getenv("MISTRAL_API_KEY", "").strip()
+    if mistral_key:
+        try:
+            from mistralai.client import Mistral
+
+            client = Mistral(api_key=mistral_key)
+            resp = client.chat.complete(
+                model="mistral-small-latest",
+                messages=messages,
+            )
+            content = getattr(resp.choices[0].message, "content", "").strip()
+            if content:
+                return content
+        except Exception:
+            pass
+
+    return None
+
+
+def fallback_synthesizer(user_prompt: str, tool_executions: List[Dict[str, Any]]) -> str:
+    """
+    Intelligent deterministic synthesizer when cloud LLMs are offline or unreachable.
+    Generates clean Markdown summaries from the tool observations.
+    """
+    parts = []
+    has_count = False
+    has_records = False
+
+    for item in tool_executions:
+        tool = item.get("tool")
+        res = item.get("result", {})
+
+        if tool == "executeSOQL":
+            if isinstance(res, dict) and "totalSize" in res and (not res.get("records") or len(res["records"]) == 0):
+                parts.append(f"There are currently **{res['totalSize']} total opportunities** recorded in your Salesforce CRM.")
+                has_count = True
+            elif isinstance(res, dict) and res.get("records"):
+                records = res["records"]
+                has_records = True
+                lines = ["Here are the top opportunities from your pipeline:"]
+                for i, r in enumerate(records[:5], 1):
+                    name = r.get("Name", "Unnamed")
+                    stage = r.get("StageName", "N/A")
+                    amount = r.get("Amount")
+                    amt_str = f"${float(amount):,.2f}" if amount is not None else "Amount not set"
+                    lines.append(f"{i}. **{name}** — {amt_str} | Stage: `{stage}`")
+                parts.append("\n".join(lines))
+
+        elif tool in ["searchOpportunities", "searchAccounts", "getOpportunity"]:
+            records = res.get("records", []) if isinstance(res, dict) else []
+            if records:
+                lines = [f"Found **{len(records)}** matching record(s) in Salesforce:"]
+                for r in records[:5]:
+                    name = r.get("Name", "N/A")
+                    id_val = r.get("Id", "")
+                    stage = r.get("StageName")
+                    extra = f" | Stage: `{stage}`" if stage else ""
+                    lines.append(f"- **{name}** (`{id_val}`){extra}")
+                parts.append("\n".join(lines))
+            else:
+                parts.append("No matching records found in Salesforce.")
+
+        elif tool == "createNotes":
+            args = item.get("args", {})
+            parts.append(f"Successfully attached note to Opportunity **{args.get('opportunityId')}** in Salesforce.")
+
+    if parts:
+        return "\n\n".join(parts)
+
+    return "Salesforce query executed successfully. See execution details below."
+
+
+def synthesize_grounded_answer(user_prompt: str, tool_executions: List[Dict[str, Any]]) -> str:
+    """
+    Synthesizes an executive, contextual, natural-language response strictly grounded
+    in the live Salesforce observations.
+    """
+    if not tool_executions:
+        return "No Salesforce actions were required."
+
+    # Direct passthrough for formatNotes LoRA output
+    if len(tool_executions) == 1 and tool_executions[0].get("tool") == "formatNotes":
+        return str(tool_executions[0].get("result", ""))
+
+    # Prepare structured observation context
+    obs_text = ""
+    for i, item in enumerate(tool_executions, 1):
+        tool = item.get("tool", "unknown")
+        args = item.get("args", {})
+        res = item.get("result", {})
+        obs_text += f"\n--- Observation {i} ({tool}) ---\nParameters: {json.dumps(args)}\nResult: {json.dumps(res, default=str)}\n"
+
+    synthesis_messages = [
+        {"role": "system", "content": SYNTHESIZER_SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": (
+                f"User Inquiry: {user_prompt}\n\n"
+                f"Salesforce Real Observations:\n{obs_text}\n\n"
+                f"Now synthesize an executive, grounded, helpful response strictly based on the above observations:"
+            ),
+        },
+    ]
+
+    response = generate_llm_text(synthesis_messages)
+    if response and response.strip():
+        return response.strip()
+
+    # Resilient fallback synthesis
+    return fallback_synthesizer(user_prompt, tool_executions)
 
 
 def chat_with_tools(
@@ -263,8 +442,31 @@ def chat_with_tools(
             last_user_msg = m.get("content", "")
             break
 
+    # Offline domain guardrail check
+    off_topic_indicators = [
+        "capital of", "recipe", "who is the president", "tell me a joke",
+        "write a poem", "how to bake", "sort an array", "weather in"
+    ]
+    if any(k in last_user_msg.lower() for k in off_topic_indicators):
+        return (
+            MockMessage(
+                "I am specialized exclusively as your Salesforce CRM Executive Assistant. "
+                "I cannot assist with general knowledge or off-topic inquiries, but I am ready "
+                "to help you analyze your Salesforce pipeline, query opportunities, inspect accounts, "
+                "or format meeting notes."
+            ),
+            None,
+        )
+
     tool_calls = fallback_intent_matcher(last_user_msg)
     if tool_calls:
         return MockMessage("Executing requested tool..."), tool_calls
 
-    return MockMessage(f"Received query: '{last_user_msg}'. No specific tool matched."), None
+    return (
+        MockMessage(
+            f"I am your Salesforce CRM Executive Assistant. How can I assist you with your pipeline, "
+            f"opportunities, accounts, or meeting notes today?"
+        ),
+        None,
+    )
+

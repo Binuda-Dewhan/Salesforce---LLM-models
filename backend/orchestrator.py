@@ -7,7 +7,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
 
 from .tools import TOOLS
-from .llm_client import chat_with_tools
+from .llm_client import chat_with_tools, synthesize_grounded_answer
 from .salesforce_client import SalesforceClient
 from .mcp_client import MCPClient, USE_MCP
 
@@ -176,63 +176,70 @@ def parse_args(raw_args) -> Dict[str, Any]:
 
 def run_query(user_prompt: str) -> Dict[str, Any]:
     """
-    Main entry point for conversational agent queries:
-    1. Sends prompt to LLM planner (Mistral or fallback).
-    2. Identifies required tool.
-    3. Executes tool (Salesforce REST, MCP, or Local LoRA Formatter).
-    4. Returns structured execution payload.
+    Main entry point for conversational agent queries (Grounded ReAct Loop):
+    1. Evaluates user prompt against Master CRM Executive prompt & Domain Guardrails.
+    2. Identifies required tool(s) (supports parallel / multi-query executions).
+    3. Executes each tool against Salesforce REST, MCP microservice, or local LoRA model.
+    4. Gathers all observations and runs Grounded Answer Synthesis pass.
+    5. Returns unified payload containing executive answer and audit trace.
     """
     messages = [{"role": "user", "content": user_prompt}]
     model_msg, tool_calls = chat_with_tools(messages, TOOLS)
 
+    # 1. No tool calls -> Either direct conversational response or domain refusal
     if not tool_calls:
-        return {"type": "answer", "message": getattr(model_msg, "content", str(model_msg))}
+        content = getattr(model_msg, "content", str(model_msg)).strip()
+        is_refusal = any(
+            phrase in content.lower()
+            for phrase in [
+                "specialized exclusively",
+                "cannot assist with general",
+                "salesforce crm executive assistant",
+                "off-topic inquiries",
+                "unrelated to salesforce"
+            ]
+        )
+        return {
+            "type": "agent_response",
+            "answer": content,
+            "is_refusal": is_refusal,
+            "tool_executions": []
+        }
 
-    tc = tool_calls[0]
-    tool_name = getattr(tc.function, "name", None)
-    raw_args = getattr(tc.function, "arguments", {})
-    args = parse_args(raw_args)
+    # 2. Execute ALL tool calls
+    tool_executions = []
+    for tc in tool_calls:
+        tool_name = getattr(tc.function, "name", None)
+        raw_args = getattr(tc.function, "arguments", {})
+        args = parse_args(raw_args)
 
-    if tool_name in LOCAL_TOOL_MAP:
         try:
-            # Check if MCP routing is active for getLatestNotes
-            if USE_MCP and tool_name == "getLatestNotes":
-                mcp.call(tool_name, args)
-
-            result = LOCAL_TOOL_MAP[tool_name](args)
-            return {
-                "type": "tool_result",
-                "tool": tool_name,
-                "args": args,
-                "result": result
-            }
+            if tool_name in LOCAL_TOOL_MAP:
+                if USE_MCP and tool_name == "getLatestNotes":
+                    mcp.call(tool_name, args)
+                result = LOCAL_TOOL_MAP[tool_name](args)
+            elif USE_MCP:
+                result = mcp.call(tool_name, args)
+            else:
+                result = {"error": f"Unknown tool '{tool_name}' and MCP is disabled."}
         except Exception as e:
-            return {
-                "type": "error",
-                "tool": tool_name,
-                "args": args,
-                "error": str(e)
-            }
+            result = {"error": str(e)}
 
-    if USE_MCP:
-        try:
-            res = mcp.call(tool_name, args)
-            return {
-                "type": "tool_result_mcp",
-                "tool": tool_name,
-                "args": args,
-                "result": res
-            }
-        except Exception as e:
-            return {
-                "type": "error",
-                "tool": tool_name,
-                "args": args,
-                "error": f"MCP error: {str(e)}"
-            }
+        tool_executions.append({
+            "tool": tool_name,
+            "args": args,
+            "result": result
+        })
+
+    # 3. Grounded Answer Synthesis Pass
+    try:
+        synthesized_answer = synthesize_grounded_answer(user_prompt, tool_executions)
+    except Exception as e:
+        synthesized_answer = f"Executed {len(tool_executions)} Salesforce operation(s) successfully."
 
     return {
-        "type": "error",
-        "error": f"Unknown tool '{tool_name}' and MCP is disabled.",
-        "args": args
+        "type": "agent_response",
+        "answer": synthesized_answer,
+        "is_refusal": False,
+        "tool_executions": tool_executions
     }
