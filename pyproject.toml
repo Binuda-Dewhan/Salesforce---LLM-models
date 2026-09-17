@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "salesforce-ai-integration"
+version = "1.0.0"
+description = "Enterprise Salesforce AI Integration — Grounded ReAct Agent with LoRA Notes Formatter"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "pydantic>=2.0.0",
+    "requests>=2.31.0",
+    "mistralai>=1.0.0",
+    "torch>=2.2.0",
+    "transformers>=4.40.0",
+    "peft>=0.10.0",
+    "trl>=0.8.6",
+    "datasets>=2.19.0",
+    "bitsandbytes>=0.43.0",
+    "accelerate>=0.29.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.27.0",          # For FastAPI TestClient
+]
+
+notebook = [
+    "notebook>=7.0.0",
+    "ipykernel>=6.29.0",
+]
+
+# ---------------------------------------------------------------------------
+# Pytest configuration
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+log_cli = true
+log_cli_level = "INFO"
+log_format = "%(asctime)s [%(levelname)s] %(name)s — %(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"
+
+# ---------------------------------------------------------------------------
+# Ruff linter configuration (optional but recommended for CI)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]  # line-length handled by formatter

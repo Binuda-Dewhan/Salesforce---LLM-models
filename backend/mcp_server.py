@@ -1,22 +1,27 @@
 """
-Model Context Protocol (MCP) Server
-===================================
-A standalone JSON-RPC 2.0 microservice exposing Salesforce CRM operations
-and LoRA Notes Formatting as standard MCP Tools.
+backend/mcp_server.py
+=====================
+Model Context Protocol (MCP) Server — standalone JSON-RPC 2.0 microservice.
+
+Exposes Salesforce CRM operations and LoRA Notes Formatting as standard MCP Tools.
 
 Protocol: Model Context Protocol over HTTP (JSON-RPC 2.0)
 Default Port: 5000
 Endpoint: POST /rpc
+
+Environment is loaded centrally by backend.config.
 """
 
-import os
+import logging
 import uvicorn
 from fastapi import FastAPI, Request
-from typing import Dict, Any
+from typing import Any, Dict
 
-from .salesforce_client import SalesforceClient
 from .orchestrator import format_notes_with_lora
+from .salesforce_client import SalesforceClient
 from .tools import TOOLS
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Salesforce MCP Server",

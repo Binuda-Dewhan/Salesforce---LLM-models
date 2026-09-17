@@ -123,9 +123,9 @@ function renderRecordsTable(records) {
 function formatMarkdown(text) {
   if (!text) return "";
   let html = text
-    .replace(/^### (.*$)/gim, '<h4 style="margin: 0.8rem 0 0.35rem 0; color: #a5b4fc; font-size: 0.95rem;">$1</h4>')
-    .replace(/^## (.*$)/gim, '<h3 style="margin: 0.9rem 0 0.45rem 0; color: #c7d2fe; font-size: 1.05rem;">$1</h3>')
-    .replace(/^# (.*$)/gim, '<h2 style="margin: 1rem 0 0.55rem 0; color: #e0e7ff; font-size: 1.15rem;">$1</h2>')
+    .replace(/^### (.*$)/gm, '<h4 style="margin: 0.8rem 0 0.35rem 0; color: #a5b4fc; font-size: 0.95rem;">$1</h4>')
+    .replace(/^## (.*$)/gm, '<h3 style="margin: 0.9rem 0 0.45rem 0; color: #c7d2fe; font-size: 1.05rem;">$1</h3>')
+    .replace(/^# (.*$)/gm, '<h2 style="margin: 1rem 0 0.55rem 0; color: #e0e7ff; font-size: 1.15rem;">$1</h2>')
     .replace(/\*\*(.*?)\*\*/gim, '<strong style="color: #f8fafc;">$1</strong>')
     .replace(/\*(.*?)\*/gim, '<em>$1</em>')
     .replace(/`([^`]+)`/gim, '<code style="background: rgba(0,0,0,0.3); padding: 0.15rem 0.35rem; border-radius: 4px; font-family: var(--font-mono); font-size: 0.82rem; color: #6ee7b7;">$1</code>')
@@ -370,12 +370,19 @@ async function syncNoteToSalesforce() {
     });
 
     const data = await res.json();
-    if (res.ok && data.type === "tool_result" && data.tool === "createNotes") {
+
+    // Check agent_response format (current) — look for createNotes in tool_executions
+    const isAgentSuccess = res.ok
+      && data.type === "agent_response"
+      && !data.is_refusal
+      && (data.tool_executions || []).some(te => te.tool === "createNotes");
+
+    if (isAgentSuccess) {
       alert(`🎉 Successfully synced note to Opportunity ${oppId} in Salesforce Cloud!`);
       switchTab("chat");
       appendMessage("agent", `✅ <strong>Live Sync Confirmed:</strong> Note attached to Opportunity <code>${oppId}</code> in Salesforce Cloud.<br><pre style="font-size: 0.8rem; margin-top: 0.4rem;">${noteBody}</pre>`, "Salesforce REST Sync");
     } else {
-      throw new Error(data.error || "Failed to create note in Salesforce.");
+      throw new Error(data.error || data.answer || "Failed to create note in Salesforce.");
     }
   } catch (err) {
     alert(`Error syncing to Salesforce: ${err.message}`);

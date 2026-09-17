@@ -7,13 +7,16 @@ Evaluates:
 3. Direct Salesforce Record Inspection
 4. Fine-Tuned Gemma-2B LoRA Notes Formatter Routing
 5. Offline Resilience & Deterministic Fallback Synthesizer
+
+Run from the project root:
+    pytest tests/test_agent_react.py -v
+
+sys.path is configured automatically by tests/conftest.py.
 """
 
 import os
 import sys
 
-# Ensure repository root is on PYTHONPATH
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from backend.orchestrator import run_query, format_notes_with_lora
 from backend.llm_client import fallback_intent_matcher, fallback_synthesizer, MockToolCall

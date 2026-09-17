@@ -1,63 +1,102 @@
+"""
+backend/add_notes.py
+====================
+Standalone batch note ingestion utility script.
+
+PURPOSE:
+  This is a one-shot CLI script — NOT part of the API server or agent loop.
+  It formats a predefined set of raw meeting notes using the local LoRA model
+  and then syncs the formatted notes to Salesforce as structured Note records.
+
+USAGE:
+  Run from the repository root:
+    python -m backend.add_notes
+
+  Or directly:
+    cd salesforce-integration
+    python backend/add_notes.py
+
+NOTE: Opportunity IDs in this file are sample/demo records. Update them to
+      match your own Salesforce org's Opportunity IDs before running.
+"""
+
+import logging
 import os
 import sys
 
-# Ensure backend package can be imported if script is run directly
+# Allow running as a standalone script from the repo root
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from backend.salesforce_client import SalesforceClient
 from backend.orchestrator import format_notes_with_lora
+from backend.salesforce_client import SalesforceClient
 
-def main():
-    print("=== Salesforce Batch Note Ingestion Engine ===\n")
-    
-    # Initialize Salesforce client with dynamic .env authentication
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Demo notes — update opportunity_id values to match your org
+# ---------------------------------------------------------------------------
+_DEMO_NOTES = [
+    {
+        "opportunity_id": "006gL00000A4GZtQAN",  # Example: Acme Corp
+        "opportunity_name": "Acme Corp",
+        "raw_note": (
+            "Explored current infrastructure; using legacy CRM.\n"
+            "Interested in reducing manual data entry by 40%.\n"
+            "Identified budget stage and decision timeline (Q4)."
+        ),
+    },
+    {
+        "opportunity_id": "006gL00000A4GZuQAN",  # Example: United Oil Office Portable Generators
+        "opportunity_name": "United Oil Office Portable Generators",
+        "raw_note": (
+            "Has 5 vendors; wants vendor comparison.\n"
+            "Needs scalability to 5,000 users.\n"
+            "Agreed to send basic requirements doc."
+        ),
+    },
+    {
+        "opportunity_id": "006gL00000A4GZvQAN",  # Example: Express Logistics Standby Generator
+        "opportunity_name": "Express Logistics Standby Generator",
+        "raw_note": (
+            "Seeking AI-driven analytics.\n"
+            "IT already has BI tools — curious about overlay.\n"
+            "Agreed to a follow-up demo with BI team."
+        ),
+    },
+]
+
+
+def main() -> None:
+    logger.info("=== Salesforce Batch Note Ingestion Engine ===")
     sf_client = SalesforceClient()
 
-    # Raw notes to format and sync for each opportunity
-    notes = [
-        {
-            "opportunity_id": "006gL00000A4GZtQAN",  # Acme Corp
-            "opportunity_name": "Acme Corp",
-            "raw_note": """Explored current infrastructure; using legacy CRM.
-Interested in reducing manual data entry by 40%.
-Identified budget stage and decision timeline (Q4)."""
-        },
-        {
-            "opportunity_id": "006gL00000A4GZuQAN",  # United Oil Office Portable Generators
-            "opportunity_name": "United Oil Office Portable Generators",
-            "raw_note": """Has 5 vendors; wants vendor comparison.
-Needs scalability to 5,000 users.
-Agreed to send basic requirements doc."""
-        },
-        {
-            "opportunity_id": "006gL00000A4GZvQAN",  # Express Logistics Standby Generator
-            "opportunity_name": "Express Logistics Standby Generator",
-            "raw_note": """Seeking AI-driven analytics.
-IT already has BI tools—curious about overlay.
-Agreed to a follow-up demo with BI team."""
-        }
-    ]
-
-    for item in notes:
+    for item in _DEMO_NOTES:
         opp_id = item["opportunity_id"]
         opp_name = item["opportunity_name"]
         raw = item["raw_note"]
 
-        print(f"\n--- Processing Opportunity: {opp_name} ({opp_id}) ---")
-        print("Raw Note:\n", raw)
+        logger.info("Processing: %s (%s)", opp_name, opp_id)
+        logger.debug("Raw note:\n%s", raw)
 
-        # 1. Format raw note with our fine-tuned LoRA model
-        print("Formatting note via Local Gemma-2B LoRA Adapter...")
+        # 1. Format raw note with the fine-tuned LoRA model
+        logger.info("Formatting via Local Gemma-2B LoRA Adapter...")
         formatted_note = format_notes_with_lora(raw)
-        print("Formatted Note:\n", formatted_note)
+        logger.info("Formatted note:\n%s", formatted_note)
 
-        # 2. Sync note to Salesforce
+        # 2. Sync formatted note to Salesforce
         try:
-            print("Syncing note to Salesforce Cloud...")
-            response = sf_client.create_note(opp_id, formatted_note, title=f"Meeting Notes - {opp_name}")
-            print(f"✓ Note successfully created in Salesforce: {response}")
-        except Exception as e:
-            print(f"✗ Failed to create note in Salesforce: {e}")
+            response = sf_client.create_note(
+                opp_id, formatted_note, title=f"Meeting Notes — {opp_name}"
+            )
+            logger.info("Note created in Salesforce: %s", response)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Failed to create note for '%s': %s", opp_name, exc)
+
 
 if __name__ == "__main__":
     main()
