@@ -98,6 +98,8 @@ SYNTHESIZER_SYSTEM_PROMPT = (
 # The API itself recommends "gemini-3.6-flash" in its 404 upgrade messages.
 # Update this list when Google announces new model names.
 _GEMINI_MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
     "gemini-3.6-flash",       # Current recommended model (per Google's 404 deprecation notice)
     "gemini-2.0-flash",       # Keep as fallback in case 3.6 is not in all regions yet
     "gemini-2.0-flash-lite",
