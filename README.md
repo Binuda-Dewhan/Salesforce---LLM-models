@@ -59,6 +59,25 @@ This is not a demo or prototype — it is a complete AI engineering project buil
 
 ---
 
+## 📸 Screenshots
+
+<img width="1890" height="514" alt="Screenshot 2026-09-18 234302" src="https://github.com/user-attachments/assets/aeb6324b-f9b6-470d-8da8-3329842d9215" />
+
+### CRM Agent — Compound Query & Grounded Answer
+<img width="1904" height="916" alt="Screenshot 2026-09-19 000241" src="https://github.com/user-attachments/assets/f077879a-71b8-4e64-9996-afaccaf9083f" />
+
+
+### Audit Trace — Tool Execution Drawer
+<img width="1918" height="915" alt="Screenshot 2026-09-19 000315" src="https://github.com/user-attachments/assets/f122c479-6b05-475e-8457-018d3e3d7465" />
+
+### Domain Guardrail — Off-Topic Refusal
+<img width="1919" height="590" alt="Screenshot 2026-09-19 000343" src="https://github.com/user-attachments/assets/31d82a63-95da-449f-9ce8-de7ce7630df7" />
+
+### LoRA Notes Formatter
+<img width="1919" height="912" alt="Screenshot 2026-09-19 000719" src="https://github.com/user-attachments/assets/a8ce8fec-688a-4839-9933-a6a9840e0e22" />
+
+---
+
 ## ✨ What The System Does — Full Feature Overview
 
 | Capability | Description |
