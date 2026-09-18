@@ -65,7 +65,7 @@ This is not a demo or prototype — it is a complete AI engineering project buil
 |---|---|
 | 🤖 **Conversational CRM Agent** | Ask anything about your Salesforce pipeline in plain English — the agent plans, executes, and synthesizes a grounded executive answer |
 | 📝 **AI Notes Formatter** | Paste raw meeting transcripts — the local LoRA model structures them into the standard 5-section enterprise CRM schema |
-| 🔍 **Text-to-SOQL** | Natural language → dynamic SOQL queries (counts, rankings, filters, aggregations) executed against live Salesforce data |
+| 🔍 **Text-to-SOQL(Salesforce Object Query Language)** | Natural language → dynamic SOQL queries (counts, rankings, filters, aggregations) executed against live Salesforce data |
 | 🛡️ **Domain Guardrails** | The agent is strictly scoped to Salesforce CRM — off-topic questions are politely declined, not answered |
 | ☁️ **Live Salesforce Sync** | Create and retrieve real Salesforce Notes attached to Opportunities via REST API |
 | 🔌 **MCP Microservice** | All tools are exposed as a standard JSON-RPC 2.0 MCP server usable by Claude Desktop, Cursor, and other AI clients |
