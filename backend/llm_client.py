@@ -94,14 +94,18 @@ SYNTHESIZER_SYSTEM_PROMPT = (
 # ---------------------------------------------------------------------------
 # Confirmed Gemini model cascade
 # ---------------------------------------------------------------------------
-# Listed in preference order. All names are verified against the Google AI
-# Studio / Gemini API as of the implementation date.
-# Add new models at the TOP when they become available.
+# Listed in preference order. Verified against Google AI Studio API.
+# The API itself recommends "gemini-3.6-flash" in its 404 upgrade messages.
+# Update this list when Google announces new model names.
 _GEMINI_MODELS = [
-    "gemini-2.0-flash",
+    "gemini-3.6-flash",       # Current recommended model (per Google's 404 deprecation notice)
+    "gemini-2.0-flash",       # Keep as fallback in case 3.6 is not in all regions yet
+    "gemini-2.0-flash-lite",
     "gemini-1.5-flash",
     "gemini-1.5-flash-8b",
+    "gemini-1.5-pro",
 ]
+
 
 _GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
 
